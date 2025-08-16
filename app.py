@@ -18,7 +18,7 @@ from src.analyzer import (
 st.markdown(
     """
     <div style="text-align: center;">
-        <img src="assets/logo.png" width="150">
+        <img ="assets/logo.png" width="150">
         <h1>📑 FIKRA Simplify</h1>
         <p><b>Simplifying complex information.</b></p>
     </div>
