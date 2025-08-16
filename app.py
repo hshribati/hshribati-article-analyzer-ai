@@ -24,8 +24,6 @@ models = _load_models()
 # ----------------------------
 # Streamlit App
 # ----------------------------
-st.set_page_config(page_title="Article Analyzer AI", layout="wide")
-st.title("📑 Article Analyzer AI")
 
 st.set_page_config(page_title="FIKRA Analyzer AI", layout="wide")
 st.title("📑 FIKRA Analyzer AI")
