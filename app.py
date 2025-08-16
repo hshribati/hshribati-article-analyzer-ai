@@ -1,146 +1,122 @@
-import io
-from typing import List, Dict, Any
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from src.utils import load_file_texts
+from src.utils import extract_text_from_file
 from src.analyzer import (
     get_models,
     summarize_text,
     analyze_sentiment,
     extract_entities,
-    build_corpus_index,
-    rag_qa,
-    global_summary_from_summaries,
+    global_summary,
+    simple_qa,
 )
 
-st.set_page_config(page_title="Article Analyzer AI", layout="wide")
-
-st.title("📰 Article Analyzer AI")
-st.caption("Upload PDFs, Word docs, HTML or TXT — get summaries, sentiment, entities, a global roll‑up, and ask questions.")
-
-# --- Sidebar: Upload ---
-st.sidebar.header("Upload articles")
-uploaded_files = st.sidebar.file_uploader(
-    "Choose files (.pdf, .docx, .txt, .html)",
-    accept_multiple_files=True,
-    type=["pdf", "docx", "txt", "html", "htm"],
-)
-
-# --- Cache models once per session ---
-@st.cache_resource(show_spinner=False)
+# ----------------------------
+# Load models (cached for performance)
+# ----------------------------
+@st.cache_resource
 def _load_models():
     return get_models()
 
 models = _load_models()
 
-# --- Process files ---
+# ----------------------------
+# Streamlit App
+# ----------------------------
+st.set_page_config(page_title="Article Analyzer AI", layout="wide")
+st.title("📑 Article Analyzer AI")
+
+st.write(
+    "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
+    "summaries, sentiment, named entities, global insights, and Q&A."
+)
+
+# ----------------------------
+# File Upload
+# ----------------------------
+uploaded_files = st.file_uploader(
+    "Upload Articles",
+    type=["pdf", "docx", "txt", "html"],
+    accept_multiple_files=True,
+)
+
+all_texts = []
+results = []
+
 if uploaded_files:
-    with st.spinner("Extracting text..."):
-        docs = load_file_texts(uploaded_files)  # List[dict]: {id, name, text}
+    for uploaded_file in uploaded_files:
+        st.subheader(f"📄 {uploaded_file.name}")
 
-    # Per‑article analysis
-    results: List[Dict[str, Any]] = []
-    with st.spinner("Analyzing articles with open‑source models…"):
-        for d in docs:
-            text = d["text"]
-            summary = summarize_text(text, models)
-            sent_label, sent_score = analyze_sentiment(text, models)
-            ents = extract_entities(text, models)
+        text = extract_text_from_file(uploaded_file)
+        all_texts.append(text)
 
-            results.append(
-                {
-                    "id": d["id"],
-                    "name": d["name"],
-                    "summary": summary,
-                    "sentiment": sent_label,
-                    "sentiment_score": round(float(sent_score), 3),
-                    "entities": ents,  # [{'text':..,'label':..}, ...]
-                    "text": text,
-                }
-            )
+        # Summarize
+        summary = summarize_text(models, text)
 
-    df = pd.DataFrame(
-        [
-            {
-                "File": r["name"],
-                "Summary": r["summary"],
-                "Sentiment": f"{r['sentiment']} ({r['sentiment_score']})",
-                "Top Entities": ", ".join(sorted({e['text'] for e in r["entities"]})[:12]),
-                "Chars": len(r["text"]),
-            }
-            for r in results
-        ]
-    )
+        # Sentiment
+        sentiment = analyze_sentiment(models, text)
 
-    st.subheader("Per‑Article Results")
-    st.dataframe(df, use_container_width=True, height=300)
+        # Entities
+        entities = extract_entities(models, text)
 
-    # --- Charts ---
-    st.subheader("Visualizations")
-    col1, col2 = st.columns(2, vertical_alignment="top")
+        # Save results
+        results.append({
+            "filename": uploaded_file.name,
+            "summary": summary,
+            "sentiment": sentiment,
+            "entities": entities
+        })
 
-    # Sentiment pie
-    with col1:
-        st.markdown("**Sentiment Distribution**")
-        pie_data = (
-            pd.Series([r["sentiment"] for r in results])
-            .value_counts()
-            .rename_axis("Sentiment")
-            .reset_index(name="Count")
-        )
-        fig1, ax1 = plt.subplots()
-        ax1.pie(pie_data["Count"], labels=pie_data["Sentiment"], autopct="%1.0f%%", startangle=90)
-        ax1.axis("equal")
-        st.pyplot(fig1, use_container_width=True)
+        # Show outputs
+        st.write("**Summary:**", summary)
+        st.write("**Sentiment:**", sentiment)
 
-    # Entity bar
-    with col2:
-        st.markdown("**Top Named Entities**")
-        all_ents = []
-        for r in results:
-            all_ents.extend([(e["text"], e["label"]) for e in r["entities"]])
-        ent_df = pd.DataFrame(all_ents, columns=["Entity", "Type"])
-        if not ent_df.empty:
-            top_entities = (
-                ent_df.groupby(["Entity", "Type"])
-                .size()
-                .reset_index(name="Count")
-                .sort_values("Count", ascending=False)
-                .head(15)
-            )
-            fig2, ax2 = plt.subplots()
-            ax2.barh(top_entities["Entity"], top_entities["Count"])
-            ax2.invert_yaxis()
-            ax2.set_xlabel("Mentions")
-            ax2.set_ylabel("Entity")
-            st.pyplot(fig2, use_container_width=True)
-        else:
-            st.info("No entities detected.")
+        if entities:
+            st.write("**Named Entities:**")
+            df_entities = pd.DataFrame(entities)
+            st.dataframe(df_entities)
 
-    # --- Global summary ---
-    st.subheader("Global Summary (across all articles)")
-    global_summary = global_summary_from_summaries([r["summary"] for r in results], models)
-    st.write(global_summary)
+# ----------------------------
+# Global Summary
+# ----------------------------
+if all_texts:
+    st.subheader("🌍 Global Summary Across All Articles")
+    st.write(global_summary(models, all_texts))
 
-    # --- Q&A over corpus (RAG-lite) ---
-    st.subheader("Ask Questions about these Articles")
-    with st.spinner("Indexing the corpus for Q&A…"):
-        index = build_corpus_index(
-            [{"id": r["id"], "name": r["name"], "text": r["text"]} for r in results],
-            models,
-        )
-
-    question = st.text_input("Your question")
+# ----------------------------
+# Q&A Section
+# ----------------------------
+if all_texts:
+    st.subheader("❓ Ask Questions About Articles")
+    question = st.text_input("Enter your question:")
     if question:
-        with st.spinner("Searching & answering…"):
-            answer, passages = rag_qa(question, index, models, top_k=5)
-        st.markdown("**Answer:**")
-        st.write(answer)
-        with st.expander("Show supporting passages"):
-            for i, p in enumerate(passages, 1):
-                st.markdown(f"**{i}. {p['name']}**")
-                st.write(p["snippet"])
-else:
-    st.info("👈 Upload a few articles to begin.")
+        answer = simple_qa(question, all_texts)
+        st.write("**Answer:**", answer)
+
+# ----------------------------
+# Visualizations
+# ----------------------------
+if results:
+    st.subheader("📊 Analysis Visualizations")
+
+    # Sentiment Pie Chart
+    labels = [r["sentiment"]["label"] for r in results]
+    sentiment_counts = pd.Series(labels).value_counts()
+
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sentiment_counts, labels=sentiment_counts.index, autopct="%1.1f%%")
+    ax1.set_title("Sentiment Distribution")
+    st.pyplot(fig1)
+
+    # Entity Bar Chart
+    all_entities = []
+    for r in results:
+        for ent in r["entities"]:
+            all_entities.append(ent["entity"])
+    if all_entities:
+        entity_counts = pd.Series(all_entities).value_counts()
+        fig2, ax2 = plt.subplots()
+        entity_counts.plot(kind="bar", ax=ax2)
+        ax2.set_title("Entity Distribution")
+        st.pyplot(fig2)
