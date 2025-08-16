@@ -102,23 +102,25 @@ def simple_qa(question, texts):
 from collections import Counter
 import re
 
-def extract_main_terms(text, top_k=15):
+from keybert import KeyBERT
+
+kw_model = KeyBERT(model="all-MiniLM-L6-v2")
+
+def extract_main_terms(text, top_k=10):
     """
-    Extract main terms/keywords from text by counting word frequency.
-    Ignores common stopwords.
+    Extract top keywords/key phrases from text using KeyBERT.
     """
-    STOPWORDS = {
-        "the", "and", "is", "in", "to", "of", "a", "for", "on", "with",
-        "as", "by", "an", "are", "at", "from", "that", "this", "be",
-        "has", "have", "it", "its", "or", "but", "not", "was", "which"
-    }
+    if not text.strip():
+        return []
     
-    # clean and split words
-    words = re.findall(r"\b\w+\b", text.lower())
-    words = [w for w in words if w not in STOPWORDS and len(w) > 2]
+    keywords = kw_model.extract_keywords(
+        text,
+        keyphrase_ngram_range=(1, 3),  # unigrams, bigrams, trigrams
+        stop_words='english',
+        top_n=top_k
+    )
     
-    counts = Counter(words)
-    most_common = counts.most_common(top_k)
-    
-    return [word for word, count in most_common]
+    # keywords is a list of tuples: (term, score)
+    return [term for term, score in keywords]
+
 
