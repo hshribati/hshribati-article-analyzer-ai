@@ -98,3 +98,27 @@ def simple_qa(question, texts):
         return " ".join(results[:5])  # return up to 5 matching sentences
     else:
         return "No relevant information found."
+
+from collections import Counter
+import re
+
+def extract_main_terms(text, top_k=15):
+    """
+    Extract main terms/keywords from text by counting word frequency.
+    Ignores common stopwords.
+    """
+    STOPWORDS = {
+        "the", "and", "is", "in", "to", "of", "a", "for", "on", "with",
+        "as", "by", "an", "are", "at", "from", "that", "this", "be",
+        "has", "have", "it", "its", "or", "but", "not", "was", "which"
+    }
+    
+    # clean and split words
+    words = re.findall(r"\b\w+\b", text.lower())
+    words = [w for w in words if w not in STOPWORDS and len(w) > 2]
+    
+    counts = Counter(words)
+    most_common = counts.most_common(top_k)
+    
+    return [word for word, count in most_common]
+
