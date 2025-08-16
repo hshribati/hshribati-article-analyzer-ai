@@ -23,26 +23,19 @@ st.set_page_config(
 )
 
 # ----------------------------
-# Sidebar
-# ----------------------------
-st.sidebar.title("FIKRA Simplify")
-st.sidebar.write("Upload articles, see analysis, ask questions.")
-
-# ----------------------------
-# Horizontal Header: Logo left, Title + Tagline right
+# Header: Logo + Title
 # ----------------------------
 col_logo, col_title = st.columns([1, 4])
-
 with col_logo:
     try:
         logo = Image.open("assets/logo.png")
         st.image(logo, width=100)
     except FileNotFoundError:
-        st.warning("Logo not found! Make sure 'assets/logo.png' exists in the repo.")
+        st.warning("Logo not found!")
 
 with col_title:
-    st.markdown("<h1 style='margin-bottom:0;'>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='margin-top:0; color:gray; font-size:16px;'>Simplifying complex information.</p>", unsafe_allow_html=True)
+    st.markdown("<h1>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color:gray; font-size:16px;'>Simplifying complex information.</p>", unsafe_allow_html=True)
 
 # ----------------------------
 # Load Models
@@ -65,47 +58,35 @@ st.write(
 # ----------------------------
 # File Upload
 # ----------------------------
-upload_col, result_col = st.columns([1,2])
-
-with upload_col:
-    uploaded_files = st.file_uploader(
-        "Upload Articles",
-        type=["pdf","docx","txt","html"],
-        accept_multiple_files=True
-    )
+uploaded_files = st.file_uploader(
+    "Upload Articles",
+    type=["pdf","docx","txt","html"],
+    accept_multiple_files=True
+)
 
 all_texts = []
 results = []
 
 if uploaded_files:
     for uploaded_file in uploaded_files:
-        with result_col:
-            st.subheader(f"📄 {uploaded_file.name}")
+        st.subheader(f"📄 {uploaded_file.name}")
+        text = extract_text_from_file(uploaded_file)
+        all_texts.append(text)
 
-            text = extract_text_from_file(uploaded_file)
-            all_texts.append(text)
+        summary = summarize_text(models, text)
+        sentiment = analyze_sentiment(models, text)
+        main_terms = extract_main_terms(text)
 
-            # Summarize
-            summary = summarize_text(models, text)
+        results.append({
+            "filename": uploaded_file.name,
+            "summary": summary,
+            "sentiment": sentiment,
+            "main_terms": main_terms
+        })
 
-            # Sentiment
-            sentiment = analyze_sentiment(models, text)
-
-            # Main Terms
-            main_terms = extract_main_terms(text)
-
-            # Save results
-            results.append({
-                "filename": uploaded_file.name,
-                "summary": summary,
-                "sentiment": sentiment,
-                "main_terms": main_terms
-            })
-
-            # Show outputs
-            st.markdown(f"**Summary:** {summary}")
-            st.markdown(f"**Sentiment:** {sentiment}")
-            st.markdown(f"**Main Terms:** {', '.join(main_terms)}")
+        st.markdown(f"**Summary:** {summary}")
+        st.markdown(f"**Sentiment:** {sentiment}")
+        st.markdown(f"**Main Terms:** {', '.join(main_terms)}")
 
 # ----------------------------
 # Global Summary
@@ -148,7 +129,7 @@ if results:
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
-    # Main Terms Table (styled)
+    # Main Terms Table
     all_terms = []
     for r in results:
         all_terms.extend(r["main_terms"])
