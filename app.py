@@ -30,26 +30,27 @@ with col_logo:
     try:
         logo = Image.open("assets/logo.png")
         st.image(logo, width=100)
-    except FileNotFoundError:
+    except:
         st.warning("Logo not found!")
 
 with col_title:
     st.markdown("<h1>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
     st.markdown("<p style='color:gray; font-size:16px;'>Simplifying complex information.</p>", unsafe_allow_html=True)
 
+st.markdown("---")
+
 # ----------------------------
 # Load Models
 # ----------------------------
 @st.cache_resource
-def _load_models():
+def load_models():
     return get_models()
 
-models = _load_models()
+models = load_models()
 
 # ----------------------------
 # App Description
 # ----------------------------
-st.markdown("---")
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
     "summaries, sentiment, main terms, global insights, and Q&A."
@@ -60,7 +61,7 @@ st.write(
 # ----------------------------
 uploaded_files = st.file_uploader(
     "Upload Articles",
-    type=["pdf","docx","txt","html"],
+    type=["pdf", "docx", "txt", "html"],
     accept_multiple_files=True
 )
 
@@ -70,13 +71,21 @@ results = []
 if uploaded_files:
     for uploaded_file in uploaded_files:
         st.subheader(f"📄 {uploaded_file.name}")
+
+        # Extract text
         text = extract_text_from_file(uploaded_file)
         all_texts.append(text)
 
+        # Summarize
         summary = summarize_text(models, text)
+
+        # Sentiment
         sentiment = analyze_sentiment(models, text)
+
+        # Main terms
         main_terms = extract_main_terms(text)
 
+        # Save results
         results.append({
             "filename": uploaded_file.name,
             "summary": summary,
@@ -84,6 +93,7 @@ if uploaded_files:
             "main_terms": main_terms
         })
 
+        # Display results
         st.markdown(f"**Summary:** {summary}")
         st.markdown(f"**Sentiment:** {sentiment}")
         st.markdown(f"**Main Terms:** {', '.join(main_terms)}")
@@ -104,8 +114,7 @@ if all_texts:
     st.subheader("❓ Ask Questions About Articles")
     question = st.text_input("Enter your question:")
     if question:
-        answer = simple_qa(question, all_texts)
-        st.markdown(f"**Answer:** {answer}")
+        st.markdown(f"**Answer:** {simple_qa(question, all_texts)}")
 
 # ----------------------------
 # Visualizations
@@ -118,16 +127,16 @@ if results:
     labels = [r["sentiment"]["label"] for r in results]
     sentiment_counts = pd.Series(labels).value_counts()
 
-    fig1, ax1 = plt.subplots()
-    ax1.pie(
+    fig, ax = plt.subplots()
+    ax.pie(
         sentiment_counts,
         labels=sentiment_counts.index,
         autopct="%1.1f%%",
         startangle=90,
         colors=['#4CAF50','#F44336','#FFC107']
     )
-    ax1.set_title("Sentiment Distribution")
-    st.pyplot(fig1)
+    ax.set_title("Sentiment Distribution")
+    st.pyplot(fig)
 
     # Main Terms Table
     all_terms = []
@@ -138,6 +147,4 @@ if results:
         term_counts = pd.Series(all_terms).value_counts().reset_index()
         term_counts.columns = ["Term", "Frequency"]
         st.subheader("📋 Main Terms Table")
-        st.dataframe(
-            term_counts.style.background_gradient(cmap='Blues').set_properties(**{'font-size':'14px'})
-        )
+        st.dataframe(term_counts.style.background_gradient(cmap='Blues'))
