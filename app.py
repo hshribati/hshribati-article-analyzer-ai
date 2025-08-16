@@ -27,6 +27,8 @@ models = _load_models()
 st.set_page_config(page_title="Article Analyzer AI", layout="wide")
 st.title("📑 Article Analyzer AI")
 
+st.set_page_config(page_title="FIKRA Analyzer AI", layout="wide")
+st.title("📑 FIKRA Analyzer AI")
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
     "summaries, sentiment, named entities, global insights, and Q&A."
