@@ -23,6 +23,36 @@ st.set_page_config(page_title="FIKRA Simplify", page_icon="🧠", layout="wide")
 # ----------------------------
 st.sidebar.title("FIKRA Simplify")
 st.sidebar.write("Upload articles, see analysis, ask questions.")
+# ----------------------------
+# Sidebar Topics Section
+# ----------------------------
+st.sidebar.title("📚 Topics")
+
+# Political Science
+with st.sidebar.expander("Political Science"):
+    st.write("- Comparative Politics")
+    st.write("- International Relations")
+    st.write("- Political Theory")
+    st.write("- Public Policy")
+    st.write("- Governance & Administration")
+
+# History
+with st.sidebar.expander("History"):
+    st.write("- Ancient History")
+    st.write("- Modern History")
+    st.write("- Islamic History")
+    st.write("- World History")
+
+# Economics
+with st.sidebar.expander("Economics"):
+    st.write("- Microeconomics")
+    st.write("- Macroeconomics")
+    st.write("- Development Economics")
+    st.write("- Behavioral Economics")
+
+# Other topics (placeholder for now)
+with st.sidebar.expander("Other Topics"):
+    st.write("More sections coming soon...")
 
 # ----------------------------
 # Header: Logo left, title right
