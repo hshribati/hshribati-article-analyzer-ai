@@ -1,30 +1,20 @@
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from src.utils import extract_text_from_file
-from src.analyzer import (
-    get_models,
-    summarize_text,
-    analyze_sentiment,
-    global_summary,
-    simple_qa,
-    extract_main_terms
-)
+from PIL import Image
 
 # ----------------------------
 # Logo, Title & Tagline
 # ----------------------------
-st.markdown(
-    """
-    <div style="text-align: center;">
-        <img src="assets/logo.png" width="150">
-        <h1>📑 FIKRA Simplify</h1>
-        <p><b>Simplifying complex information.</b></p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+
+try:
+    # Load logo from local assets folder
+    logo = Image.open("assets/logo.png")  # path relative to app.py
+    st.image(logo, width=150)
+except FileNotFoundError:
+    st.warning("Logo not found! Make sure 'assets/logo.png' exists in the repo.")
+
+# App title & tagline
+st.title("📑 FIKRA Simplify")
+st.write("**Simplifying complex information.**")
 
 # ----------------------------
 # Load models (cached for performance)
