@@ -105,13 +105,14 @@ if results:
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
-    # Main Terms Bar Chart
-    all_terms = []
-    for r in results:
-        all_terms.extend(r["main_terms"])
-    if all_terms:
-        term_counts = pd.Series(all_terms).value_counts()
-        fig2, ax2 = plt.subplots()
-        term_counts.plot(kind="bar", ax=ax2)
-        ax2.set_title("Main Terms Distribution")
-        st.pyplot(fig2)
+# Main Terms Table
+all_terms = []
+for r in results:
+    all_terms.extend(r["main_terms"])
+
+if all_terms:
+    term_counts = pd.Series(all_terms).value_counts().reset_index()
+    term_counts.columns = ["Term", "Frequency"]
+    st.subheader("📋 Main Terms Table")
+    st.dataframe(term_counts)
+
