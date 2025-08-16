@@ -74,6 +74,7 @@ if uploaded_files:
 
         # Extract text
         text = extract_text_from_file(uploaded_file)
+        st.text_area("Preview (first 500 chars)", text[:500], height=100)
         all_texts.append(text)
 
         # Summarize
