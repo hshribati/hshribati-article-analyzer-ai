@@ -1,94 +1,126 @@
 from transformers import pipeline
 import re
-from sklearn.feature_extraction.text import CountVectorizer
 
 # ----------------------------
-# Load models
+# Load Hugging Face pipelines
 # ----------------------------
 def get_models():
-    """Load and return AI models."""
     models = {}
-    try:
-        models["summarizer"] = pipeline(
-            "summarization",
-            model="sshleifer/distilbart-cnn-12-6",
-            device_map="auto"
-        )
-        models["sentiment"] = pipeline(
-            "sentiment-analysis",
-            model="distilbert-base-uncased-finetuned-sst-2-english",
-            device_map="auto"
-        )
-    except Exception as e:
-        print(f"Error loading models: {e}")
+    # Summarizer (good balance of size/quality, runs on CPU)
+    models["summarizer"] = pipeline(
+        "summarization",
+        model="sshleifer/distilbart-cnn-12-6",
+        device=-1  # force CPU for Streamlit Cloud
+    )
+
+    # Sentiment Analysis
+    models["sentiment"] = pipeline(
+        "sentiment-analysis",
+        model="distilbert-base-uncased-finetuned-sst-2-english",
+        device=-1
+    )
+
+    # Named Entity Recognition
+    models["ner"] = pipeline(
+        "ner",
+        model="dslim/bert-base-NER",
+        aggregation_strategy="simple",
+        device=-1
+    )
+
     return models
+
 
 # ----------------------------
 # Summarization
 # ----------------------------
 def summarize_text(models, text, max_length=130, min_length=30):
     if not text.strip():
-        return ""
+        return "No content to summarize."
     try:
-        summary = models["summarizer"](text, max_length=max_length, min_length=min_length, truncation=True)
+        summary = models["summarizer"](text, max_length=max_length, min_length=min_length, do_sample=False)
         return summary[0]["summary_text"]
     except Exception as e:
-        return f"[Error summarizing text: {e}]"
+        return f"Error summarizing text: {e}"
+
 
 # ----------------------------
-# Sentiment analysis
+# Sentiment Analysis
 # ----------------------------
 def analyze_sentiment(models, text):
     if not text.strip():
-        return {"label": "NEUTRAL", "score": 0}
+        return {"label": "NEUTRAL", "score": 0.0}
     try:
-        result = models["sentiment"](text[:512])[0]  # limit to 512 tokens
-        return result
+        result = models["sentiment"](text[:512])[0]  # limit length for performance
+        return {"label": result["label"], "score": result["score"]}
     except Exception as e:
-        return {"label": "ERROR", "score": 0}
+        return {"label": "ERROR", "score": 0.0, "error": str(e)}
+
 
 # ----------------------------
-# Chunking helper for long texts
+# Named Entity Recognition
 # ----------------------------
-def chunk_text(text, max_words=400):
-    """Yield chunks of text with up to max_words each."""
-    words = text.split()
-    for i in range(0, len(words), max_words):
-        yield " ".join(words[i:i + max_words])
+def extract_entities(models, text):
+    if not text.strip():
+        return []
+    try:
+        entities = models["ner"](text[:1000])  # limit for performance
+        # clean up entities
+        return [{"entity": ent["entity_group"], "word": ent["word"]} for ent in entities]
+    except Exception as e:
+        return [{"entity": "ERROR", "word": str(e)}]
+
 
 # ----------------------------
-# Global summary for multiple articles
+# Global Summary
 # ----------------------------
-def global_summary(models, all_texts):
-    combined_text = " ".join(all_texts)
-    summaries = []
+def global_summary(models, texts):
+    combined = " ".join(texts)
+    return summarize_text(models, combined, max_length=200, min_length=60)
 
-    for chunk in chunk_text(combined_text, max_words=400):
-        try:
-            summaries.append(summarize_text(models, chunk))
-        except Exception as e:
-            summaries.append(f"[Error summarizing chunk: {e}]")
-
-    return " ".join(summaries)
 
 # ----------------------------
-# Simple Q&A (keyword matching)
+# Simple Q&A (heuristic based)
 # ----------------------------
-def simple_qa(question, all_texts):
-    combined_text = " ".join(all_texts)
-    # Simple search: return sentences containing keywords from the question
-    keywords = question.lower().split()
-    sentences = re.split(r'(?<=[.!?]) +', combined_text)
-    answers = [s for s in sentences if any(k in s.lower() for k in keywords)]
-    return " ".join(answers[:3]) if answers else "No relevant information found."
+def simple_qa(question, texts):
+    """
+    Very simple Q&A: just searches for sentences containing keywords from the question.
+    (If you want, we can later upgrade this to a proper Hugging Face Q&A model.)
+    """
+    keywords = re.findall(r"\w+", question.lower())
+    results = []
+    for text in texts:
+        sentences = re.split(r'(?<=[.!?]) +', text)
+        for s in sentences:
+            if any(k in s.lower() for k in keywords):
+                results.append(s)
+    if results:
+        return " ".join(results[:5])  # return up to 5 matching sentences
+    else:
+        return "No relevant information found."
 
-# ----------------------------
-# Extract main terms
-# ----------------------------
-def extract_main_terms(text, top_n=10):
-    vectorizer = CountVectorizer(stop_words="english")
-    X = vectorizer.fit_transform([text])
-    sum_words = X.sum(axis=0)
-    words_freq = [(word, sum_words[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
-    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
-    return [word for word, freq in words_freq[:top_n]]
+from collections import Counter
+import re
+
+from keybert import KeyBERT
+
+kw_model = KeyBERT(model="all-MiniLM-L6-v2")
+
+def extract_main_terms(text, top_k=10):
+    """
+    Extract top keywords/key phrases from text using KeyBERT.
+    """
+    if not text.strip():
+        return []
+    
+    keywords = kw_model.extract_keywords(
+        text,
+        keyphrase_ngram_range=(1, 3),  # unigrams, bigrams, trigrams
+        stop_words='english',
+        top_n=top_k
+    )
+    
+    # keywords is a list of tuples: (term, score)
+    return [term for term, score in keywords]
+
+
