@@ -26,8 +26,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-
 # ----------------------------
 # Load models (cached for performance)
 # ----------------------------
@@ -38,20 +36,8 @@ def _load_models():
 models = _load_models()
 
 # ----------------------------
-# Streamlit App
+# App Description
 # ----------------------------
-import streamlit as st
-from PIL import Image
-
-# Load logo
-logo = Image.open("assets/logo.png")  # adjust path if different
-st.image(logo, width=150)  # adjust size as needed
-
-# App title & tagline
-st.title("📑 FIKRA Simplify")
-st.write("**Simplifying complex information.**")
-
-
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
     "summaries, sentiment, main terms, global insights, and Q&A."
@@ -130,14 +116,13 @@ if results:
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
-# Main Terms Table
-all_terms = []
-for r in results:
-    all_terms.extend(r["main_terms"])
+    # Main Terms Table
+    all_terms = []
+    for r in results:
+        all_terms.extend(r["main_terms"])
 
-if all_terms:
-    term_counts = pd.Series(all_terms).value_counts().reset_index()
-    term_counts.columns = ["Term", "Frequency"]
-    st.subheader("📋 Main Terms Table")
-    st.dataframe(term_counts)
-
+    if all_terms:
+        term_counts = pd.Series(all_terms).value_counts().reset_index()
+        term_counts.columns = ["Term", "Frequency"]
+        st.subheader("📋 Main Terms Table")
+        st.dataframe(term_counts)
