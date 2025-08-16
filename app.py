@@ -29,21 +29,20 @@ st.sidebar.title("FIKRA Simplify")
 st.sidebar.write("Upload articles, see analysis, ask questions.")
 
 # ----------------------------
-# Header with Logo & Tagline
+# Horizontal Header: Logo left, Title + Tagline right
 # ----------------------------
-col1, col2, col3 = st.columns([1,2,1])
-with col2:
+col_logo, col_title = st.columns([1, 4])
+
+with col_logo:
     try:
         logo = Image.open("assets/logo.png")
-        st.image(logo, width=150)
+        st.image(logo, width=100)
     except FileNotFoundError:
         st.warning("Logo not found! Make sure 'assets/logo.png' exists in the repo.")
 
-    st.markdown("<h1 style='text-align:center;'>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
-    st.markdown(
-        "<p style='text-align:center; font-size:16px; color:gray;'>Simplifying complex information.</p>",
-        unsafe_allow_html=True
-    )
+with col_title:
+    st.markdown("<h1 style='margin-bottom:0;'>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='margin-top:0; color:gray; font-size:16px;'>Simplifying complex information.</p>", unsafe_allow_html=True)
 
 # ----------------------------
 # Load Models
@@ -139,7 +138,13 @@ if results:
     sentiment_counts = pd.Series(labels).value_counts()
 
     fig1, ax1 = plt.subplots()
-    ax1.pie(sentiment_counts, labels=sentiment_counts.index, autopct="%1.1f%%", startangle=90, colors=['#4CAF50','#F44336','#FFC107'])
+    ax1.pie(
+        sentiment_counts,
+        labels=sentiment_counts.index,
+        autopct="%1.1f%%",
+        startangle=90,
+        colors=['#4CAF50','#F44336','#FFC107']
+    )
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
