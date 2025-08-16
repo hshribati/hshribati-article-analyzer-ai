@@ -3,37 +3,39 @@ import re
 from sklearn.feature_extraction.text import CountVectorizer
 
 # ----------------------------
-# Load high-quality AI models
+# Load AI models (Cloud-friendly)
 # ----------------------------
 def get_models():
-    """Load summarization and sentiment models (no 200MB restriction)."""
     models = {}
     try:
-        # More accurate summarization
+        # Small summarization model for Streamlit Cloud
         models["summarizer"] = pipeline(
             "summarization",
-            model="facebook/bart-large-cnn",
-            device="auto"
+            model="sshleifer/distilbart-cnn-12-6",
+            device="cpu"
         )
-        # More nuanced sentiment analysis
+        # Basic sentiment analysis
         models["sentiment"] = pipeline(
             "sentiment-analysis",
-            model="cardiffnlp/twitter-roberta-base-sentiment",
-            device="auto"
+            model="distilbert-base-uncased-finetuned-sst-2-english",
+            device="cpu"
         )
     except Exception as e:
         print(f"Error loading models: {e}")
     return models
 
 # ----------------------------
-# Summarization with chunking
+# Text chunking for long articles
 # ----------------------------
-def chunk_text(text, max_words=500):
+def chunk_text(text, max_words=400):
     words = text.split()
     for i in range(0, len(words), max_words):
         yield " ".join(words[i:i + max_words])
 
-def summarize_text(models, text, max_length=200, min_length=50):
+# ----------------------------
+# Summarize text
+# ----------------------------
+def summarize_text(models, text, max_length=130, min_length=30):
     if not text.strip():
         return ""
     summaries = []
@@ -52,7 +54,7 @@ def analyze_sentiment(models, text):
     if not text.strip():
         return {"label": "NEUTRAL", "score": 0}
     try:
-        result = models["sentiment"](text[:512])[0]  # limit input for performance
+        result = models["sentiment"](text[:512])[0]  # limit to 512 tokens
         return result
     except Exception as e:
         return {"label": "ERROR", "score": 0}
