@@ -11,6 +11,10 @@ from src.analyzer import (
     simple_qa,
     extract_main_terms
 )
+
+# ----------------------------
+# Logo, Title & Tagline
+# ----------------------------
 st.markdown(
     """
     <div style="text-align: center;">
@@ -21,6 +25,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 # ----------------------------
