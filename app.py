@@ -24,8 +24,8 @@ models = _load_models()
 # ----------------------------
 # Streamlit App
 # ----------------------------
-st.set_page_config(page_title="FIKRA Simplify AI", layout="wide")
-st.title("📑 FIKRA Simplify AI")
+st.set_page_config(page_title="FIKRA SIMPLIFY AI", layout="wide")
+st.title("📑 FIKRA SIMPLIFY AI")
 
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
