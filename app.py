@@ -7,9 +7,9 @@ from src.analyzer import (
     get_models,
     summarize_text,
     analyze_sentiment,
-    extract_entities,
     global_summary,
     simple_qa,
+    extract_main_terms
 )
 
 # ----------------------------
@@ -24,12 +24,12 @@ models = _load_models()
 # ----------------------------
 # Streamlit App
 # ----------------------------
-
 st.set_page_config(page_title="FIKRA Analyzer AI", layout="wide")
 st.title("📑 FIKRA Analyzer AI")
+
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
-    "summaries, sentiment, named entities, global insights, and Q&A."
+    "summaries, sentiment, main terms, global insights, and Q&A."
 )
 
 # ----------------------------
@@ -57,25 +57,21 @@ if uploaded_files:
         # Sentiment
         sentiment = analyze_sentiment(models, text)
 
-        # Entities
-        entities = extract_entities(models, text)
+        # Main Terms
+        main_terms = extract_main_terms(text)
 
         # Save results
         results.append({
             "filename": uploaded_file.name,
             "summary": summary,
             "sentiment": sentiment,
-            "entities": entities
+            "main_terms": main_terms
         })
 
         # Show outputs
         st.write("**Summary:**", summary)
         st.write("**Sentiment:**", sentiment)
-
-        if entities:
-            st.write("**Named Entities:**")
-            df_entities = pd.DataFrame(entities)
-            st.dataframe(df_entities)
+        st.write("**Main Terms:**", ", ".join(main_terms))
 
 # ----------------------------
 # Global Summary
@@ -109,14 +105,13 @@ if results:
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
-    # Entity Bar Chart
-    all_entities = []
+    # Main Terms Bar Chart
+    all_terms = []
     for r in results:
-        for ent in r["entities"]:
-            all_entities.append(ent["entity"])
-    if all_entities:
-        entity_counts = pd.Series(all_entities).value_counts()
+        all_terms.extend(r["main_terms"])
+    if all_terms:
+        term_counts = pd.Series(all_terms).value_counts()
         fig2, ax2 = plt.subplots()
-        entity_counts.plot(kind="bar", ax=ax2)
-        ax2.set_title("Entity Distribution")
+        term_counts.plot(kind="bar", ax=ax2)
+        ax2.set_title("Main Terms Distribution")
         st.pyplot(fig2)
