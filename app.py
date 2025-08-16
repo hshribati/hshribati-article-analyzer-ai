@@ -124,8 +124,9 @@ if all_texts:
     st.subheader("❓ Ask Questions About Articles")
     question = st.text_input("Enter your question:")
     if question:
-        answer = simple_qa(question, all_texts)
+        answer = simple_qa(question, all_texts, models=models)
         st.markdown(f"**Answer:** {answer}")
+
 
 # ----------------------------
 # Visualizations
