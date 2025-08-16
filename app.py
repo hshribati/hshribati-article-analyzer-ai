@@ -11,6 +11,17 @@ from src.analyzer import (
     simple_qa,
     extract_main_terms
 )
+st.markdown(
+    """
+    <div style="text-align: center;">
+        <img src="assets/logo.png" width="150">
+        <h1>📑 FIKRA Simplify</h1>
+        <p><b>Simplifying complex information.</b></p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # ----------------------------
 # Load models (cached for performance)
