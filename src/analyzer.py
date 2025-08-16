@@ -8,16 +8,22 @@ from sklearn.feature_extraction.text import CountVectorizer
 def get_models():
     models = {}
     try:
-        # Small summarization model for Streamlit Cloud
+        # Summarization
         models["summarizer"] = pipeline(
             "summarization",
             model="sshleifer/distilbart-cnn-12-6",
             device="cpu"
         )
-        # Basic sentiment analysis
+        # Sentiment analysis
         models["sentiment"] = pipeline(
             "sentiment-analysis",
             model="distilbert-base-uncased-finetuned-sst-2-english",
+            device="cpu"
+        )
+        # Question Answering
+        models["qa"] = pipeline(
+            "question-answering",
+            model="distilbert-base-cased-distilled-squad",
             device="cpu"
         )
     except Exception as e:
@@ -25,16 +31,31 @@ def get_models():
     return models
 
 # ----------------------------
-# Text chunking for long articles
+# Q&A (context-aware)
+# ----------------------------
+def simple_qa(question, all_texts, models=None):
+    if not all_texts or not question.strip():
+        return "No context or question provided."
+
+    # Combine all texts
+    context = " ".join(all_texts)
+    # Remove formatting codes (RTF, DOCX leftovers)
+    context = re.sub(r'{\\.*?}|\\[a-z]+\d*', '', context)
+
+    try:
+        result = models["qa"](question=question, context=context)
+        return result["answer"]
+    except Exception as e:
+        return f"No relevant information found: {e}"
+
+# ----------------------------
+# Keep existing functions
 # ----------------------------
 def chunk_text(text, max_words=400):
     words = text.split()
     for i in range(0, len(words), max_words):
         yield " ".join(words[i:i + max_words])
 
-# ----------------------------
-# Summarize text
-# ----------------------------
 def summarize_text(models, text, max_length=130, min_length=30):
     if not text.strip():
         return ""
@@ -47,38 +68,19 @@ def summarize_text(models, text, max_length=130, min_length=30):
             summaries.append(f"[Error summarizing chunk: {e}]")
     return " ".join(summaries)
 
-# ----------------------------
-# Sentiment analysis
-# ----------------------------
 def analyze_sentiment(models, text):
     if not text.strip():
         return {"label": "NEUTRAL", "score": 0}
     try:
-        result = models["sentiment"](text[:512])[0]  # limit to 512 tokens
+        result = models["sentiment"](text[:512])[0]
         return result
     except Exception as e:
         return {"label": "ERROR", "score": 0}
 
-# ----------------------------
-# Global summary for multiple articles
-# ----------------------------
 def global_summary(models, all_texts):
     combined_text = " ".join(all_texts)
     return summarize_text(models, combined_text)
 
-# ----------------------------
-# Simple Q&A (keyword search)
-# ----------------------------
-def simple_qa(question, all_texts):
-    combined_text = " ".join(all_texts)
-    keywords = question.lower().split()
-    sentences = re.split(r'(?<=[.!?]) +', combined_text)
-    answers = [s for s in sentences if any(k in s.lower() for k in keywords)]
-    return " ".join(answers[:3]) if answers else "No relevant information found."
-
-# ----------------------------
-# Extract main terms
-# ----------------------------
 def extract_main_terms(text, top_n=10):
     vectorizer = CountVectorizer(stop_words="english")
     X = vectorizer.fit_transform([text])
