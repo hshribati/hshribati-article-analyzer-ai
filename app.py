@@ -113,11 +113,7 @@ if uploaded_files:
 if all_texts:
     st.markdown("---")
     st.subheader("🌍 Global Summary Across All Articles")
-    try:
-        summary = global_summary(models, all_texts)
-        st.write(summary)
-    except Exception as e:
-        st.error(f"Error summarizing text: {e}")
+    st.write(global_summary(models, all_texts))
 
 # ----------------------------
 # Q&A Section
@@ -152,7 +148,7 @@ if results:
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
 
-    # Main Terms Table
+    # Main Terms Table (styled)
     all_terms = []
     for r in results:
         all_terms.extend(r["main_terms"])
