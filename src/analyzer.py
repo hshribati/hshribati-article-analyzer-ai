@@ -1,163 +1,100 @@
-from typing import List, Dict, Tuple, Any
+from transformers import pipeline
 import re
-import numpy as np
 
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
-
-# ---------- Model loading ----------
+# ----------------------------
+# Load Hugging Face pipelines
+# ----------------------------
 def get_models():
-    """
-    Load and cache models used across the app.
-    Chosen for decent quality vs. small footprint on Streamlit Cloud.
-    """
     models = {}
-
-    # Summarization (smallish)
+    # Summarizer (good balance of size/quality, runs on CPU)
     models["summarizer"] = pipeline(
         "summarization",
         model="sshleifer/distilbart-cnn-12-6",
-        device_map="auto",
+        device=-1  # force CPU for Streamlit Cloud
     )
 
-    # Sentiment (SST-2)
+    # Sentiment Analysis
     models["sentiment"] = pipeline(
         "sentiment-analysis",
         model="distilbert-base-uncased-finetuned-sst-2-english",
-        device_map="auto",
+        device=-1
     )
 
-    # NER
+    # Named Entity Recognition
     models["ner"] = pipeline(
         "ner",
         model="dslim/bert-base-NER",
         aggregation_strategy="simple",
-        device_map="auto",
+        device=-1
     )
 
-    # QA (extractive)
-    models["qa"] = pipeline(
-        "question-answering",
-        model="deepset/roberta-base-squad2",
-        device_map="auto",
-    )
-
-    # Embeddings for retrieval
-    models["embedder"] = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     return models
 
 
-# ---------- Utilities ----------
-def clean_text(text: str) -> str:
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+# ----------------------------
+# Summarization
+# ----------------------------
+def summarize_text(models, text, max_length=130, min_length=30):
+    if not text.strip():
+        return "No content to summarize."
+    try:
+        summary = models["summarizer"](text, max_length=max_length, min_length=min_length, do_sample=False)
+        return summary[0]["summary_text"]
+    except Exception as e:
+        return f"Error summarizing text: {e}"
 
 
-def chunk_text(text: str, max_chars: int = 1800, overlap: int = 150) -> List[str]:
+# ----------------------------
+# Sentiment Analysis
+# ----------------------------
+def analyze_sentiment(models, text):
+    if not text.strip():
+        return {"label": "NEUTRAL", "score": 0.0}
+    try:
+        result = models["sentiment"](text[:512])[0]  # limit length for performance
+        return {"label": result["label"], "score": result["score"]}
+    except Exception as e:
+        return {"label": "ERROR", "score": 0.0, "error": str(e)}
+
+
+# ----------------------------
+# Named Entity Recognition
+# ----------------------------
+def extract_entities(models, text):
+    if not text.strip():
+        return []
+    try:
+        entities = models["ner"](text[:1000])  # limit for performance
+        # clean up entities
+        return [{"entity": ent["entity_group"], "word": ent["word"]} for ent in entities]
+    except Exception as e:
+        return [{"entity": "ERROR", "word": str(e)}]
+
+
+# ----------------------------
+# Global Summary
+# ----------------------------
+def global_summary(models, texts):
+    combined = " ".join(texts)
+    return summarize_text(models, combined, max_length=200, min_length=60)
+
+
+# ----------------------------
+# Simple Q&A (heuristic based)
+# ----------------------------
+def simple_qa(question, texts):
     """
-    Naive chunking by characters with overlap (keeps it tokenizer-agnostic).
+    Very simple Q&A: just searches for sentences containing keywords from the question.
+    (If you want, we can later upgrade this to a proper Hugging Face Q&A model.)
     """
-    text = clean_text(text)
-    if len(text) <= max_chars:
-        return [text]
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + max_chars, len(text))
-        chunk = text[start:end]
-        # extend to sentence end if possible
-        if end < len(text):
-            dot = text.rfind(".", start, end)
-            if dot > 0 and dot - start > 300:
-                chunk = text[start:dot + 1]
-                end = dot + 1
-        chunks.append(chunk)
-        if end >= len(text):
-            break
-        start = max(0, end - overlap)
-    return chunks
-
-
-# ---------- Per-article analysis ----------
-def summarize_text(text: str, models: Dict[str, Any]) -> str:
-    text = clean_text(text)
-    chunks = chunk_text(text, max_chars=2000, overlap=200)
-    summaries = []
-    for ch in chunks:
-        out = models["summarizer"](ch, max_length=160, min_length=50, do_sample=False)
-        summaries.append(out[0]["summary_text"])
-    merged = " ".join(summaries)
-    # optional second-pass compression
-    if len(merged) > 2500:
-        out = models["summarizer"](merged[:8000], max_length=220, min_length=80, do_sample=False)
-        merged = out[0]["summary_text"]
-    return merged
-
-
-def analyze_sentiment(text: str, models: Dict[str, Any]) -> Tuple[str, float]:
-    text = clean_text(text)
-    sample = text[:5000]  # keep it fast
-    result = models["sentiment"](sample)[0]
-    label = result["label"].lower()
-    score = float(result["score"])
-    if label == "negative" and score < 0.6:
-        label = "neutral"  # soften borderline negativity for long docs
-    return label, score
-
-
-def extract_entities(text: str, models: Dict[str, Any]) -> List[Dict[str, str]]:
-    text = clean_text(text)
-    sample = text[:8000]
-    ents = models["ner"](sample)
-    cleaned = []
-    seen = set()
-    for e in ents:
-        key = (e["word"].strip(), e["entity_group"])
-        if key in seen:
-            continue
-        seen.add(key)
-        cleaned.append({"text": e["word"].strip(), "label": e["entity_group"]})
-    return cleaned
-
-
-# ---------- Global summary ----------
-def global_summary_from_summaries(summaries: List[str], models: Dict[str, Any]) -> str:
-    joined = " ".join(summaries)
-    joined = joined[:12000]  # safety cap
-    out = models["summarizer"](joined, max_length=260, min_length=90, do_sample=False)
-    return out[0]["summary_text"]
-
-
-# ---------- RAG (retrieval-augmented Q&A) ----------
-def build_corpus_index(docs: List[Dict[str, str]], models: Dict[str, Any], chunk_chars: int = 900) -> Dict[str, Any]:
-    """
-    Build a simple in-memory index:
-      - chunk each doc
-      - embed chunks
-      - store vectors & metadata
-    """
-    passages = []
-    for d in docs:
-        for ch in chunk_text(d["text"], max_chars=chunk_chars, overlap=120):
-            passages.append(
-                {"id": d["id"], "name": d["name"], "text": ch, "snippet": ch[:360] + ("..." if len(ch) > 360 else "")}
-            )
-    embeddings = models["embedder"].encode([p["text"] for p in passages], normalize_embeddings=True)
-    index = {
-        "passages": passages,
-        "embeddings": embeddings.astype("float32"),
-    }
-    return index
-
-
-def rag_qa(question: str, index: Dict[str, Any], models: Dict[str, Any], top_k: int = 5) -> Tuple[str, List[Dict[str, str]]]:
-    q_vec = models["embedder"].encode([question], normalize_embeddings=True)
-    sims = cosine_similarity(q_vec, index["embeddings"])[0]
-    top_idx = np.argsort(-sims)[:top_k]
-    ctx = "\n\n".join(index["passages"][i]["text"] for i in top_idx)
-    ctx = ctx[:4500]  # keep QA fast
-    qa_out = models["qa"]({"question": question, "context": ctx})
-    answer = qa_out.get("answer", "").strip() or "(no exact answer found; try rephrasing)"
-    support = [index["passages"][i] for i in top_idx]
-    return answer, support
+    keywords = re.findall(r"\w+", question.lower())
+    results = []
+    for text in texts:
+        sentences = re.split(r'(?<=[.!?]) +', text)
+        for s in sentences:
+            if any(k in s.lower() for k in keywords):
+                results.append(s)
+    if results:
+        return " ".join(results[:5])  # return up to 5 matching sentences
+    else:
+        return "No relevant information found."
