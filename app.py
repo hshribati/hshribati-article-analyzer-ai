@@ -24,8 +24,17 @@ models = _load_models()
 # ----------------------------
 # Streamlit App
 # ----------------------------
-st.set_page_config(page_title="FIKRA SIMPLIFY AI", layout="wide")
-st.title("📑 FIKRA SIMPLIFY AI")
+import streamlit as st
+from PIL import Image
+
+# Load logo
+logo = Image.open("assets/logo.png")  # adjust path if different
+st.image(logo, width=150)  # adjust size as needed
+
+# App title & tagline
+st.title("📑 FIKRA Simplify")
+st.write("**Simplifying complex information.**")
+
 
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
