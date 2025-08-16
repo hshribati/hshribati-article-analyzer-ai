@@ -2,7 +2,7 @@ streamlit>=1.36
 transformers>=4.41
 torch>=2.2
 sentencepiece
-pypdf2>=3.0
+PyPDF2>=3.0
 python-docx>=1.1
 beautifulsoup4>=4.12
 lxml>=5.2
@@ -12,4 +12,3 @@ scikit-learn>=1.4
 sentence-transformers>=2.6
 matplotlib>=3.8
 keybert>=0.8.0
-sentence-transformers>=2.6
