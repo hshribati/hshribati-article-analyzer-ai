@@ -10,22 +10,24 @@ def get_models():
     try:
         models["summarizer"] = pipeline(
             "summarization",
-            model="facebook/bart-large-cnn",  # robust for longer text
-            device_map="auto"
+            model="sshleifer/distilbart-cnn-12-6",  # small model
+            device="cpu"  # Streamlit Cloud: CPU
         )
         models["sentiment"] = pipeline(
             "sentiment-analysis",
             model="distilbert-base-uncased-finetuned-sst-2-english",
-            device_map="auto"
+            device="cpu"
         )
     except Exception as e:
         print(f"Error loading models: {e}")
     return models
 
 # ----------------------------
-# Summarization
+# Summarization (limit text)
 # ----------------------------
-def summarize_text(models, text, max_length=150, min_length=30):
+def summarize_text(models, text, max_words=500, max_length=150, min_length=30):
+    words = text.split()
+    text = " ".join(words[:max_words])
     if not text.strip():
         return ""
     try:
@@ -46,11 +48,11 @@ def analyze_sentiment(models, text):
         return {"label": "ERROR", "score": 0}
 
 # ----------------------------
-# Global Summary
+# Global Summary (combine all texts, limited)
 # ----------------------------
-def global_summary(models, all_texts):
+def global_summary(models, all_texts, max_words=500):
     combined_text = " ".join(all_texts)
-    return summarize_text(models, combined_text)
+    return summarize_text(models, combined_text, max_words=max_words)
 
 # ----------------------------
 # Simple Q&A (keyword search)
