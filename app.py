@@ -14,13 +14,9 @@ from src.analyzer import (
 )
 
 # ----------------------------
-# Page Config
+# Page config
 # ----------------------------
-st.set_page_config(
-    page_title="FIKRA Simplify",
-    page_icon="🧠",
-    layout="wide"
-)
+st.set_page_config(page_title="FIKRA Simplify", page_icon="🧠", layout="wide")
 
 # ----------------------------
 # Sidebar
@@ -29,7 +25,7 @@ st.sidebar.title("FIKRA Simplify")
 st.sidebar.write("Upload articles, see analysis, ask questions.")
 
 # ----------------------------
-# Horizontal Header: Logo left, Title + Tagline right
+# Header: Logo left, title right
 # ----------------------------
 col_logo, col_title = st.columns([1, 4])
 
@@ -38,39 +34,40 @@ with col_logo:
         logo = Image.open("assets/logo.png")
         st.image(logo, width=100)
     except FileNotFoundError:
-        st.warning("Logo not found! Make sure 'assets/logo.png' exists in the repo.")
+        st.warning("Logo not found! Place it in 'assets/logo.png'")
 
 with col_title:
     st.markdown("<h1 style='margin-bottom:0;'>📑 FIKRA Simplify</h1>", unsafe_allow_html=True)
     st.markdown("<p style='margin-top:0; color:gray; font-size:16px;'>Simplifying complex information.</p>", unsafe_allow_html=True)
 
+st.markdown("---")
+
 # ----------------------------
-# Load Models
+# Load models
 # ----------------------------
 @st.cache_resource
-def _load_models():
+def load_models():
     return get_models()
 
-models = _load_models()
+models = load_models()
 
 # ----------------------------
-# App Description
+# App description
 # ----------------------------
-st.markdown("---")
 st.write(
     "Upload multiple articles (.pdf, .docx, .txt, .html) and get AI-powered analysis: "
     "summaries, sentiment, main terms, global insights, and Q&A."
 )
 
 # ----------------------------
-# File Upload
+# File upload
 # ----------------------------
-upload_col, result_col = st.columns([1,2])
+upload_col, result_col = st.columns([1, 2])
 
 with upload_col:
     uploaded_files = st.file_uploader(
         "Upload Articles",
-        type=["pdf","docx","txt","html"],
+        type=["pdf", "docx", "txt", "html"],
         accept_multiple_files=True
     )
 
@@ -91,7 +88,7 @@ if uploaded_files:
             # Sentiment
             sentiment = analyze_sentiment(models, text)
 
-            # Main Terms
+            # Main terms
             main_terms = extract_main_terms(text)
 
             # Save results
@@ -102,7 +99,7 @@ if uploaded_files:
                 "main_terms": main_terms
             })
 
-            # Show outputs
+            # Display results
             st.markdown(f"**Summary:** {summary}")
             st.markdown(f"**Sentiment:** {sentiment}")
             st.markdown(f"**Main Terms:** {', '.join(main_terms)}")
@@ -147,7 +144,7 @@ if results:
         labels=sentiment_counts.index,
         autopct="%1.1f%%",
         startangle=90,
-        colors=['#4CAF50','#F44336','#FFC107']
+        colors=['#4CAF50', '#F44336', '#FFC107']
     )
     ax1.set_title("Sentiment Distribution")
     st.pyplot(fig1)
@@ -161,6 +158,4 @@ if results:
         term_counts = pd.Series(all_terms).value_counts().reset_index()
         term_counts.columns = ["Term", "Frequency"]
         st.subheader("📋 Main Terms Table")
-        st.dataframe(
-            term_counts.style.background_gradient(cmap='Blues').set_properties(**{'font-size':'14px'})
-        )
+        st.dataframe(term_counts.style.background_gradient(cmap='Blues').set_properties(**{'font-size':'14px'}))
