@@ -26,33 +26,42 @@ st.sidebar.write("Upload articles, see analysis, ask questions.")
 # ----------------------------
 # Sidebar Topics Section
 # ----------------------------
-st.sidebar.title("📚 Topics")
+st.sidebar.markdown("## 🎯 Explore Topics")
+st.sidebar.markdown("---")
 
 # Political Science
-with st.sidebar.expander("Political Science"):
-    st.write("- Comparative Politics")
-    st.write("- International Relations")
-    st.write("- Political Theory")
-    st.write("- Public Policy")
-    st.write("- Governance & Administration")
+with st.sidebar.expander("🌍 Political Science", expanded=False):
+    st.markdown("""
+    - 🏛️ Comparative Politics  
+    - 🌐 International Relations  
+    - 📜 Political Theory  
+    - 🏢 Public Policy  
+    - ⚖️ Governance & Administration
+    """)
 
 # History
-with st.sidebar.expander("History"):
-    st.write("- Ancient History")
-    st.write("- Modern History")
-    st.write("- Islamic History")
-    st.write("- World History")
+with st.sidebar.expander("📖 History", expanded=False):
+    st.markdown("""
+    - 🏺 Ancient History  
+    - 🏰 Medieval History  
+    - 🕌 Islamic History  
+    - 🌍 World History  
+    - 📅 Modern History
+    """)
 
 # Economics
-with st.sidebar.expander("Economics"):
-    st.write("- Microeconomics")
-    st.write("- Macroeconomics")
-    st.write("- Development Economics")
-    st.write("- Behavioral Economics")
+with st.sidebar.expander("💰 Economics", expanded=False):
+    st.markdown("""
+    - 📉 Microeconomics  
+    - 📈 Macroeconomics  
+    - 🌱 Development Economics  
+    - 🧠 Behavioral Economics  
+    - 💹 International Trade
+    """)
 
-# Other topics (placeholder for now)
-with st.sidebar.expander("Other Topics"):
-    st.write("More sections coming soon...")
+# Other topics
+with st.sidebar.expander("✨ Other Topics", expanded=False):
+    st.markdown("🚧 More sections coming soon...")
 
 # ----------------------------
 # Header: Logo left, title right
