@@ -71,7 +71,7 @@ col_logo, col_title = st.columns([1, 4])
 with col_logo:
     try:
         logo = Image.open("assets/logo.png")
-        st.image(logo, width=100)
+        st.image(logo, width=400)
     except FileNotFoundError:
         st.warning("Logo not found! Place it in 'assets/logo.png'")
 
